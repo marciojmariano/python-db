@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import pymysql
 from pymysql.cursors import DictCursor
 
-from models import ProfessorCreateRequest, ProfessorResponse, TurmaCreateRequest, TurmaResponse
+from models import AlunoCreateRequest, AlunoResponse, ProfessorCreateRequest, ProfessorResponse, TurmaCreateRequest, TurmaResponse
 
 load_dotenv()
 
@@ -131,6 +131,7 @@ def atualizar_turma(id: int, payload: TurmaCreateRequest):
 # 404 Not Found = Não encontrado
 # 500 Internal Server Error = Erro do servidor
 
+# CRUD PROFESSOR 
 @app.post("/professores", status_code=status.HTTP_201_CREATED, response_model = ProfessorResponse)
 def criar_professor(payload: ProfessorCreateRequest):
     conexao = obter_conexao()
@@ -176,7 +177,7 @@ def consultar_professor(id: int):
         conexao.close()
 
 @app.delete("/professores/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def consultar_turma(id: int):
+def consultar_professor(id: int):
     conexao = obter_conexao()
     try:
         cursor = conexao.cursor()
@@ -184,7 +185,7 @@ def consultar_turma(id: int):
         professor_a_deletar = cursor.fetchone()
         if professor_a_deletar is None:
             raise HTTPException(status_code=404, detail="Professor não encontrado")
-        sql = "delete from professores turmas where id = %s"
+        sql = "delete from professores where id = %s"
         cursor.execute(sql, id)
         conexao.commit()
         cursor.close()
@@ -211,6 +212,91 @@ def atualizar_professor(id: int, payload: ProfessorCreateRequest):
         professor= cursor.fetchone()
         cursor.close()
         return professor
+    
+    finally:
+        conexao.close()
+
+# CRUD ALUNO 
+@app.post("/alunos", status_code=status.HTTP_201_CREATED, response_model = AlunoResponse)
+def criar_aluno(payload: AlunoCreateRequest):
+    conexao = obter_conexao()
+    try:
+        cursor = conexao.cursor()
+        sql = "insert into alunos (nome, sobrenome, email, data_nascimento) values (%s, %s, %s, %s)"
+        dados = (payload.nome, payload.sobrenome, payload.email, payload.data_nascimento)
+        cursor.execute(sql, dados)
+        aluno_id = cursor.lastrowid
+        cursor.execute("select * from alunos where id = %s", (aluno_id,))
+        aluno = cursor.fetchone()
+        conexao.commit()
+        cursor.close()
+        return aluno
+    
+    finally:
+        conexao.close()
+
+@app.get("/alunos", response_model=list[AlunoResponse])
+def listar_alunos():
+    conexao = obter_conexao()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute("select * from alunos")
+        alunos = cursor.fetchall()
+        cursor.close()
+        return alunos
+    finally:
+        conexao.close()
+
+@app.get("/alunos/{id}", response_model = AlunoResponse)
+def consultar_aluno(id: int):
+    conexao = obter_conexao()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute("select * from alunos where id = %s", (id,))
+        aluno_consultado = cursor.fetchone()
+        cursor.close()
+        if aluno_consultado is None:
+            raise HTTPException(status_code=404, detail="Aluno não encontrado")
+        return aluno_consultado
+    finally:
+        conexao.close()
+
+@app.delete("/alunos/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def consultar_turma(id: int):
+    conexao = obter_conexao()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute("select * from alunos where id = %s", (id,))
+        aluno_a_deletar = cursor.fetchone()
+        if aluno_a_deletar is None:
+            raise HTTPException(status_code=404, detail="Aluno não encontrado")
+        sql = "delete from alunos where id = %s"
+        cursor.execute(sql, id)
+        conexao.commit()
+        cursor.close()
+        return
+    finally:
+        conexao.close()
+
+@app.put("/alunos/{id}", response_model = AlunoResponse)
+def atualizar_aluno(id: int, payload: AlunoCreateRequest):
+    conexao = obter_conexao()
+    try:
+        cursor = conexao.cursor()
+
+        cursor.execute("select * from alunos where id = %s", (id,))
+        aluno = cursor.fetchone()
+        if aluno is None:
+            raise HTTPException(status_code=404, detail="Aluno não encontrado")
+        sql = "update alunos SET nome = %s, sobrenome = %s, email = %s, data_nascimento = %s WHERE id = %s"
+        dados = (payload.nome, payload.sobrenome, payload.email, payload.data_nascimento, id)
+        cursor.execute(sql, dados)
+        conexao.commit()
+       
+        cursor.execute("select * from alunos where id = %s", (id,))
+        aluno = cursor.fetchone()
+        cursor.close()
+        return aluno
     
     finally:
         conexao.close()
