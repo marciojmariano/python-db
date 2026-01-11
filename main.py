@@ -6,12 +6,20 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 import pymysql
 from pymysql.cursors import DictCursor
+from enum import Enum
 
 from models import AlunoCreateRequest, AlunoResponse, ProfessorCreateRequest, ProfessorResponse, TurmaCreateRequest, TurmaResponse
 
 load_dotenv()
 
 app = FastAPI()
+
+
+class ApiTag(str, Enum):
+    ALUNOS = "Alunos"
+    PROFESSORES = "Professores"
+    TURMAS = "Turmas"
+
 
 def obter_conexao():
     host = os.getenv("DB_HOST")
@@ -36,7 +44,7 @@ def read_root():
     return {"Hello": "World"}
 
 # @app.get("/turmas")
-@app.get("/turmas", response_model=list[TurmaResponse])
+@app.get("/turmas", response_model=list[TurmaResponse], tags=[ApiTag.TURMAS])
 def listar_turmas():
     conexao = obter_conexao()
     try:
@@ -48,13 +56,17 @@ def listar_turmas():
     finally:
         conexao.close()
     
-@app.post("/turmas", status_code=status.HTTP_201_CREATED, response_model = TurmaResponse)
+@app.post("/turmas", status_code=status.HTTP_201_CREATED, response_model = TurmaResponse, tags=[ApiTag.TURMAS])
 def criar_turma(payload: TurmaCreateRequest):
     conexao = obter_conexao()
     try:
         cursor = conexao.cursor()
-        sql = "insert into turmas (nome, sigla) values (%s, %s)"
-        dados = (payload.nome, payload.sigla)
+        cursor.execute("select * from professores where id = %s", (payload.id_professor,))
+        professor = cursor.fetchone()
+        if professor is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Professor não encontrado id: {payload.id_professor}")
+        sql = "insert into turmas (nome, sigla, id_professor) values (%s, %s, %s)"
+        dados = (payload.nome, payload.sigla, payload.id_professor)
         cursor.execute(sql, dados)
         turma_id = cursor.lastrowid
         cursor.execute("select * from turmas where id = %s", (turma_id,))
@@ -67,7 +79,7 @@ def criar_turma(payload: TurmaCreateRequest):
         conexao.close()
 
 # GET /turmas/{id} (id é um query param) buscar a turma por id, caso não exista retornar 404
-@app.get("/turmas/{id}", response_model = TurmaResponse)
+@app.get("/turmas/{id}", response_model = TurmaResponse, tags=[ApiTag.TURMAS])
 def consultar_turma(id: int):
     conexao = obter_conexao()
     try:
@@ -82,7 +94,7 @@ def consultar_turma(id: int):
         conexao.close()
 
 # DELETE /turmas/{id} (id é um query param) apagar turma, caso não exista retornar 404
-@app.delete("/turmas/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/turmas/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.TURMAS])
 def consultar_turma(id: int):
     conexao = obter_conexao()
     try:
@@ -100,7 +112,7 @@ def consultar_turma(id: int):
         conexao.close()
 
 # PUT /turmas/{id} (id é um query param) body é {"nome": "nome da turma", "sigla": "sigla da turma"} alterar turma, caso não exista retornar 404
-@app.put("/turmas/{id}", response_model = TurmaResponse)
+@app.put("/turmas/{id}", response_model = TurmaResponse, tags=[ApiTag.TURMAS])
 def atualizar_turma(id: int, payload: TurmaCreateRequest):
     conexao = obter_conexao()
     try:
@@ -110,8 +122,8 @@ def atualizar_turma(id: int, payload: TurmaCreateRequest):
         turma= cursor.fetchone()
         if turma is None:
             raise HTTPException(status_code=404, detail="Turma não encontrada")
-        sql = "update turmas SET nome = %s, sigla = %s WHERE id = %s"
-        dados = (payload.nome, payload.sigla, id)
+        sql = "update turmas SET nome = %s, sigla = %s, id_professor = %s WHERE id = %s"
+        dados = (payload.nome, payload.sigla, payload.id_professor, id)
         cursor.execute(sql, dados)
         conexao.commit()
        
@@ -132,7 +144,7 @@ def atualizar_turma(id: int, payload: TurmaCreateRequest):
 # 500 Internal Server Error = Erro do servidor
 
 # CRUD PROFESSOR 
-@app.post("/professores", status_code=status.HTTP_201_CREATED, response_model = ProfessorResponse)
+@app.post("/professores", status_code=status.HTTP_201_CREATED, response_model = ProfessorResponse, tags=[ApiTag.PROFESSORES])
 def criar_professor(payload: ProfessorCreateRequest):
     conexao = obter_conexao()
     try:
@@ -150,7 +162,7 @@ def criar_professor(payload: ProfessorCreateRequest):
     finally:
         conexao.close()
 
-@app.get("/professores", response_model=list[ProfessorResponse])
+@app.get("/professores", response_model=list[ProfessorResponse], tags=[ApiTag.PROFESSORES])
 def listar_professores():
     conexao = obter_conexao()
     try:
@@ -162,7 +174,7 @@ def listar_professores():
     finally:
         conexao.close()
 
-@app.get("/professores/{id}", response_model = ProfessorResponse)
+@app.get("/professores/{id}", response_model = ProfessorResponse, tags=[ApiTag.PROFESSORES])
 def consultar_professor(id: int):
     conexao = obter_conexao()
     try:
@@ -176,7 +188,7 @@ def consultar_professor(id: int):
     finally:
         conexao.close()
 
-@app.delete("/professores/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/professores/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.PROFESSORES])
 def consultar_professor(id: int):
     conexao = obter_conexao()
     try:
@@ -193,7 +205,7 @@ def consultar_professor(id: int):
     finally:
         conexao.close()
 
-@app.put("/professores/{id}", response_model = ProfessorResponse)
+@app.put("/professores/{id}", response_model = ProfessorResponse, tags=[ApiTag.PROFESSORES])
 def atualizar_professor(id: int, payload: ProfessorCreateRequest):
     conexao = obter_conexao()
     try:
@@ -217,7 +229,7 @@ def atualizar_professor(id: int, payload: ProfessorCreateRequest):
         conexao.close()
 
 # CRUD ALUNO 
-@app.post("/alunos", status_code=status.HTTP_201_CREATED, response_model = AlunoResponse)
+@app.post("/alunos", status_code=status.HTTP_201_CREATED, response_model = AlunoResponse, tags=[ApiTag.ALUNOS])
 def criar_aluno(payload: AlunoCreateRequest):
     conexao = obter_conexao()
     try:
@@ -235,7 +247,7 @@ def criar_aluno(payload: AlunoCreateRequest):
     finally:
         conexao.close()
 
-@app.get("/alunos", response_model=list[AlunoResponse])
+@app.get("/alunos", response_model=list[AlunoResponse], tags=[ApiTag.ALUNOS])
 def listar_alunos():
     conexao = obter_conexao()
     try:
@@ -247,7 +259,7 @@ def listar_alunos():
     finally:
         conexao.close()
 
-@app.get("/alunos/{id}", response_model = AlunoResponse)
+@app.get("/alunos/{id}", response_model = AlunoResponse, tags=[ApiTag.ALUNOS])
 def consultar_aluno(id: int):
     conexao = obter_conexao()
     try:
@@ -261,7 +273,7 @@ def consultar_aluno(id: int):
     finally:
         conexao.close()
 
-@app.delete("/alunos/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/alunos/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.ALUNOS])
 def consultar_turma(id: int):
     conexao = obter_conexao()
     try:
@@ -278,7 +290,7 @@ def consultar_turma(id: int):
     finally:
         conexao.close()
 
-@app.put("/alunos/{id}", response_model = AlunoResponse)
+@app.put("/alunos/{id}", response_model = AlunoResponse, tags=[ApiTag.ALUNOS])
 def atualizar_aluno(id: int, payload: AlunoCreateRequest):
     conexao = obter_conexao()
     try:

@@ -7,11 +7,13 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 class TurmaCreateRequest(BaseModel):
     nome: str = Field(min_length=2, max_lenght=100)
     sigla: str = Field(min_length=2, max_lenght=3)
+    id_professor: int = Field()
 
 class TurmaResponse(BaseModel):
     nome: str
     sigla: str
     id: int
+    id_professor: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -67,6 +69,7 @@ class AlunoResponse(BaseModel):
     # cpf: str
     nome: str
     sobrenome: str
+    email: EmailStr
     data_nascimento: date
     created_at: datetime
     updated_at: Optional[datetime] = None
