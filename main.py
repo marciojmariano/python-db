@@ -12,7 +12,8 @@ from pydantic import BaseModel
 from pymysql.cursors import DictCursor
 from enum import Enum
 
-from models import AlunoCreateRequest, AlunoEntidade, AlunoResponse, ProfessorCreateRequest, ProfessorEntidade, ProfessorResponse, TurmaCreateRequest, TurmaEntidade, TurmaResponse
+from models import CategoriaCreateRequest, CategoriaEntidade, CategoriaResponse, TicketCreateRequest, TicketEntidade, TicketResponse, TicketUpdateRequest, UsuarioCreateRequest, UsuarioEntidade, UsuarioResponse
+
 
 # Base.metadata.create_all(bind=engine) Não é uma boa pratica
 
@@ -20,28 +21,10 @@ app = FastAPI()
 
 
 class ApiTag(str, Enum):
-    ALUNOS = "Alunos"
-    PROFESSORES = "Professores"
-    TURMAS = "Turmas"
+    USUARIOS = "Usuarios"
+    CATEGORIAS = "Categorias"
+    TICKETS = "Tickets"
 
-
-# def get_connection():
-#     host = os.getenv("DB_HOST")
-#     porta = int(os.getenv("DB_PORT"))
-#     usuario = os.getenv("DB_USER")
-#     senha = os.getenv("DB_PASSWORD")
-#     db = os.getenv("DB_NAME")
-
-#     return pymysql.connect(
-#         host=host,
-#         port=porta,
-#         user=usuario,
-#         password=senha,
-#         database=db,
-#         autocommit=False,
-#         cursorclass=DictCursor,
-#         charset="utf8mb4"
-#     )
 
 def get_connection():
     return psycopg2.connect(
@@ -58,59 +41,52 @@ def read_root():
     return {"Hello": "World"}
 
   
-@app.post("/turmas", status_code=status.HTTP_201_CREATED, response_model = TurmaResponse, tags=[ApiTag.TURMAS])
-def criar_turma(payload: TurmaCreateRequest, db: Session=Depends(get_db)):
-    professor = db.get(ProfessorEntidade, payload.id_professor)    
-    if professor is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Professor não encontrado id: {payload.id_professor}")
-    turma = TurmaEntidade(
+@app.post("/categorias", status_code=status.HTTP_201_CREATED, response_model = CategoriaResponse, tags=[ApiTag.TURMAS])
+def criar_categoria(payload: CategoriaCreateRequest, db: Session=Depends(get_db)):
+    categoria = CategoriaEntidade(
         nome = payload.nome,
-        sigla = payload.sigla,
-        id_professor = payload.id_professor
+        descricao = payload.descricao
     )
-    db.add(turma)
+    db.add(categoria)
     db.commit()
-    db.refresh(turma)
-    return turma
+    db.refresh(categoria)
+    return categoria
 
-# @app.get("/turmas")
-@app.get("/turmas", response_model=list[TurmaResponse], tags=[ApiTag.TURMAS])
-def listar_turmas(db:Session = Depends(get_db)):
-    turmas = db.scalars(select(TurmaEntidade).order_by(TurmaEntidade.nome.asc())).all()
-    return turmas
+# @app.get("/categorias")
+@app.get("/categorias", response_model=list[CategoriaResponse], tags=[ApiTag.CATEGORIAS])
+def listar_categorias(db:Session = Depends(get_db)):
+    categorias = db.scalars(select(CategoriaEntidade).order_by(CategoriaEntidade.nome.asc())).all()
+    return categorias
 
-# GET /turmas/{id} (id é um query param) buscar a turma por id, caso não exista retornar 404
-@app.get("/turmas/{id}", response_model = TurmaResponse, tags=[ApiTag.TURMAS])
-def consultar_turma(id: int, db:Session = Depends(get_db)):
-    turma = db.get(TurmaEntidade, id)
-    if turma is None:
-        raise HTTPException(status_code=404, detail="Truma não encontrada")
-    return turma
+# GET /categorias/{id} (id é um query param) buscar a categoria por id, caso não exista retornar 404
+@app.get("/categorias/{id}", response_model = CategoriaResponse, tags=[ApiTag.CATEGORIAS])
+def consultar_categoria(id: int, db:Session = Depends(get_db)):
+    categoria = db.get(CategoriaEntidade, id)
+    if categoria is None:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    return categoria
 
-# DELETE /turmas/{id} (id é um query param) apagar turma, caso não exista retornar 404
-@app.delete("/turmas/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.TURMAS])
-def consultar_turma(id: int, db: Session=Depends(get_db)):
-    turma = db.get(TurmaEntidade, id)
-    if turma is None:
-        raise HTTPException(status_code=404, detail="Turma não encontrada")
-    db.delete(turma)
+# DELETE /categorias/{id} (id é um query param) apagar categoria, caso não exista retornar 404
+@app.delete("/categorias/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.CATEGORIAS])
+def deletar_categoria(id: int, db: Session=Depends(get_db)):
+    categoria = db.get(CategoriaEntidade, id)
+    if categoria is None:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    db.delete(categoria)
     db.commit()
-    
-# PUT /turmas/{id} (id é um query param) body é {"nome": "nome da turma", "sigla": "sigla da turma"} alterar turma, caso não exista retornar 404
-@app.put("/turmas/{id}", response_model = TurmaResponse, tags=[ApiTag.TURMAS])
-def atualizar_turma(id: int, payload: TurmaCreateRequest, db: Session=Depends(get_db)):
-    turma = db.get(TurmaEntidade, id)
-    if turma is None:
-        raise HTTPException(status_code=404, detail="Turma não encontrada")
-    professor = db.get(ProfessorEntidade, payload.id_professor)
-    if professor is None:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")     
-    turma.nome = payload.nome
-    turma.sigla = payload.sigla
-    turma.id_professor = payload.id_professor
+    return
+
+# PUT /categorias/{id} (id é um query param) body é {"nome": "nome da categorias", "descricao": "descricao da categoria"} alterar categorias, caso não exista retornar 404
+@app.put("/categorias/{id}", response_model = CategoriaResponse, tags=[ApiTag.CATEGORIAS])
+def atualizar_categoria(id: int, payload: CategoriaCreateRequest, db: Session=Depends(get_db)):
+    categoria = db.get(CategoriaEntidade, id)
+    if categoria is None:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    categoria.nome = payload.nome
+    categoria.descricao = payload.descricao
     db.commit()
-    db.refresh(turma)
-    return turma
+    db.refresh(categoria)
+    return categoria
 
 # Códigos de retornos:
 # 200 OK = Sucesso genérico
@@ -120,98 +96,125 @@ def atualizar_turma(id: int, payload: TurmaCreateRequest, db: Session=Depends(ge
 # 404 Not Found = Não encontrado
 # 500 Internal Server Error = Erro do servidor
 
-# CRUD PROFESSOR 
-@app.post("/professores", status_code=status.HTTP_201_CREATED, response_model = ProfessorResponse, tags=[ApiTag.PROFESSORES])
-def criar_professor(payload: ProfessorCreateRequest, db: Session =Depends(get_db)):
-    professor = ProfessorEntidade(
+# CRUD USUARIO 
+
+ 
+@app.post("/usuarios", status_code=status.HTTP_201_CREATED, response_model = UsuarioResponse, tags=[ApiTag.USUARIOS])
+def criar_usuario(payload: UsuarioCreateRequest, db: Session=Depends(get_db)):
+    usuario = UsuarioEntidade(
         nome = payload.nome,
-        sobrenome = payload.sobrenome,
         email = payload.email,
-        data_nascimento = payload.data_nascimento
+        senha = payload.senha,
+        ativo = payload.ativo
     )
-    db.add(professor)
+    db.add(usuario)
     db.commit()
-    db.refresh(professor)
-    return professor
+    db.refresh(usuario)
+    return usuario
 
-@app.get("/professores", response_model=list[ProfessorResponse], tags=[ApiTag.PROFESSORES])
-def listar_professores(db:Session = Depends(get_db)):
-    professores = db.scalars(select(ProfessorEntidade).order_by(ProfessorEntidade.nome.asc())).all()
-    return professores
+# @app.get("/usuarios")
+@app.get("/usuarios", response_model=list[UsuarioResponse], tags=[ApiTag.usuarios])
+def listar_usuarios(db:Session = Depends(get_db)):
+    usuarios = db.scalars(select(UsuarioEntidade).order_by(UsuarioEntidade.nome.asc())).all()
+    return usuarios
 
-@app.get("/professores/{id}", response_model = ProfessorResponse, tags=[ApiTag.PROFESSORES])
-def consultar_professor(id: int, db:Session=Depends(get_db)):
-    professor_consultado = db.get(ProfessorEntidade, id)
-    if professor_consultado is None:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
-    return professor_consultado
+# GET /usuarios/{id} (id é um query param) buscar a usuario por id, caso não exista retornar 404
+@app.get("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.usuarios])
+def consultar_usuario(id: int, db:Session = Depends(get_db)):
+    usuario = db.get(UsuarioEntidade, id)
+    if usuario is None:
+        raise HTTPException(status_code=404, detail="usuario não encontrada")
+    return usuario
 
-@app.delete("/professores/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.PROFESSORES])
-def apagar_professor(id: int, db:Session=Depends(get_db)):
-    professor_a_deletar = db.get(ProfessorEntidade, id)
-    if professor_a_deletar is None:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
-    db.delete(professor_a_deletar)
+# DELETE /usuarios/{id} (id é um query param) apagar usuario, caso não exista retornar 404
+@app.delete("/usuarios/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.usuarios])
+def deletar_usuario(id: int, db: Session=Depends(get_db)):
+    usuario = db.get(UsuarioEntidade, id)
+    if usuario is None:
+        raise HTTPException(status_code=404, detail="usuario não encontrada")
+    db.delete(usuario)
     db.commit()
+    return
 
-@app.put("/professores/{id}", response_model = ProfessorResponse, tags=[ApiTag.PROFESSORES])
-def atualizar_professor(id: int, payload: ProfessorCreateRequest, db:Session=Depends(get_db)):
-    professor = db.get(ProfessorEntidade, id)
-    if professor is None:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
-
-    professor.nome = payload.nome
-    professor.sobrenome = payload.sobrenome
-    professor.email = payload.email
-    professor.data_nascimento = payload.data_nascimento
-
-    db.commit()    
-    db.refresh(professor)   
-    return professor
+# PUT /usuarios/{id} (id é um query param) body é {"nome": "nome da usuarios", "email": "email da usuario"} alterar usuarios, caso não exista retornar 404
+@app.put("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.usuarios])
+def atualizar_usuario(id: int, payload: UsuarioCreateRequest, db: Session=Depends(get_db)):
+    usuario = db.get(UsuarioEntidade, id)
+    if usuario is None:
+        raise HTTPException(status_code=404, detail="usuario não encontrada")
+    usuario.nome = payload.nome
+    usuario.senha = payload.senha
+    usuario.ativo = payload.ativo
+    db.commit()
+    db.refresh(usuario)
+    return usuario
     
-# CRUD ALUNO 
-@app.post("/alunos", status_code=status.HTTP_201_CREATED, response_model = AlunoResponse, tags=[ApiTag.ALUNOS])
-def criar_aluno(payload: AlunoCreateRequest, db: Session=Depends(get_db)):
-    aluno = AlunoEntidade(
-        nome = payload.nome,
-        sobrenome = payload.sobrenome,
-        email = payload.email,
-        data_nascimento = payload.data_nascimento
+# CRUD ticket 
+@app.post("/tickets", status_code=status.HTTP_201_CREATED, response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def criar_ticket(payload: TicketCreateRequest, db: Session = Depends(get_db)):
+
+    usuario = db.get(UsuarioEntidade, payload.id_usuario)
+    if not usuario:
+        raise HTTPException(status_code=404, detail=f"Usuário ID {payload.id_usuario} não encontrado")
+    
+    categoria = db.get(CategoriaEntidade, payload.id_categoria)
+    if not categoria:
+        raise HTTPException(status_code=404, detail=f"Categoria ID {payload.id_categoria} não encontrada")
+
+    ticket = TicketEntidade(
+        titulo=payload.titulo,
+        descricao=payload.descricao,
+        prioridade=payload.prioridade,
+        id_usuario=payload.id_usuario,
+        id_categoria=payload.id_categoria
     )
-    db.add(aluno)
+    
+    db.add(ticket)
     db.commit()
-    db.refresh(aluno)
-    return aluno
+    db.refresh(ticket)
+    return ticket
 
-@app.get("/alunos", response_model=list[AlunoResponse], tags=[ApiTag.ALUNOS])
-def listar_alunos(db:Session = Depends(get_db)):
-    alunos = db.scalars(select(AlunoEntidade).order_by(AlunoEntidade.nome.asc())).all()
-    return alunos
+# GET /tickets - Listar todos os tickets
+@app.get("/tickets", response_model=list[TicketResponse], tags=[ApiTag.TICKETS])
+def listar_tickets(db: Session = Depends(get_db)):
+    return db.scalars(select(TicketEntidade).order_by(TicketEntidade.created_at.desc())).all()
 
-@app.get("/alunos/{id}", response_model = AlunoResponse, tags=[ApiTag.ALUNOS])
-def consultar_aluno(id: int, db:Session = Depends(get_db)):
-    aluno = db.get(AlunoEntidade, id)
-    if aluno is None:
-        raise HTTPException(status_code=404, detail="Aluno não encontrado")
-    return aluno
+# GET /tickets/{id} (id é um query param) buscar a tickets por id, caso não exista retornar 404
+@app.get("/tickets/{id}", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def consultar_ticket(id: int, db: Session = Depends(get_db)):
+    ticket = db.get(TicketEntidade, id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    return ticket
 
-@app.delete("/alunos/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.ALUNOS])
-def deletar_aluno(id: int, db:Session = Depends(get_db)):
-    aluno = db.get(AlunoEntidade, id)
-    if aluno is None:
-        raise HTTPException(status_code=404, detail="Aluno não encontrado")
-    db.delete(aluno)
+# PUT /tickets/{id} (id é um query param) body é {"titulo": "titulo usuarios", "desri": "email da usuario"} alterar usuarios, caso não exista retornar 404
+@app.put("/tickets/{id}", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def atualizar_ticket(id: int, payload: TicketUpdateRequest, db: Session = Depends(get_db)):
+    ticket = db.get(TicketEntidade, id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    
+    categoria = db.get(CategoriaEntidade, payload.id_categoria)
+    if not categoria:
+        raise HTTPException(status_code=404, detail="Categoria informada não existe")
+
+    ticket.titulo = payload.titulo
+    ticket.descricao = payload.descricao
+    ticket.id_categoria = payload.id_categoria
+    ticket.prioridade = payload.prioridade
+    ticket.status = payload.status 
+    
     db.commit()
+    db.refresh(ticket)
+    return ticket
 
-@app.put("/alunos/{id}", response_model = AlunoResponse, tags=[ApiTag.ALUNOS])
-def atualizar_aluno(id: int, payload: AlunoCreateRequest, db:Session = Depends(get_db)):
-    aluno = db.get(AlunoEntidade, id)
-    if aluno is None:
-        raise HTTPException(status_code=404, detail="Aluno não encontrado")
-    aluno.nome = payload.nome,
-    aluno.sobrenome = payload.sobrenome
-    aluno.email = payload.email,
-    aluno.data_nascimento = payload.data_nascimento
+# DELETE /tickets/{id} (id é um query param) apagar tickets, caso não exista retornar 404
+@app.delete("/tickets/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.TICKETS])
+def deletar_ticket(id: int, db: Session = Depends(get_db)):
+    ticket = db.get(TicketEntidade, id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    
+    db.delete(ticket)
     db.commit()
-    db.refresh(aluno)
-    return aluno
+    return
