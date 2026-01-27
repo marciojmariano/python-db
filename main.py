@@ -41,7 +41,7 @@ def read_root():
     return {"Hello": "World"}
 
   
-@app.post("/categorias", status_code=status.HTTP_201_CREATED, response_model = CategoriaResponse, tags=[ApiTag.TURMAS])
+@app.post("/categorias", status_code=status.HTTP_201_CREATED, response_model = CategoriaResponse, tags=[ApiTag.CATEGORIAS])
 def criar_categoria(payload: CategoriaCreateRequest, db: Session=Depends(get_db)):
     categoria = CategoriaEntidade(
         nome = payload.nome,
@@ -113,13 +113,13 @@ def criar_usuario(payload: UsuarioCreateRequest, db: Session=Depends(get_db)):
     return usuario
 
 # @app.get("/usuarios")
-@app.get("/usuarios", response_model=list[UsuarioResponse], tags=[ApiTag.usuarios])
+@app.get("/usuarios", response_model=list[UsuarioResponse], tags=[ApiTag.USUARIOS])
 def listar_usuarios(db:Session = Depends(get_db)):
     usuarios = db.scalars(select(UsuarioEntidade).order_by(UsuarioEntidade.nome.asc())).all()
     return usuarios
 
 # GET /usuarios/{id} (id é um query param) buscar a usuario por id, caso não exista retornar 404
-@app.get("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.usuarios])
+@app.get("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.USUARIOS])
 def consultar_usuario(id: int, db:Session = Depends(get_db)):
     usuario = db.get(UsuarioEntidade, id)
     if usuario is None:
@@ -127,7 +127,7 @@ def consultar_usuario(id: int, db:Session = Depends(get_db)):
     return usuario
 
 # DELETE /usuarios/{id} (id é um query param) apagar usuario, caso não exista retornar 404
-@app.delete("/usuarios/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.usuarios])
+@app.delete("/usuarios/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.USUARIOS])
 def deletar_usuario(id: int, db: Session=Depends(get_db)):
     usuario = db.get(UsuarioEntidade, id)
     if usuario is None:
@@ -137,7 +137,7 @@ def deletar_usuario(id: int, db: Session=Depends(get_db)):
     return
 
 # PUT /usuarios/{id} (id é um query param) body é {"nome": "nome da usuarios", "email": "email da usuario"} alterar usuarios, caso não exista retornar 404
-@app.put("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.usuarios])
+@app.put("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.USUARIOS])
 def atualizar_usuario(id: int, payload: UsuarioCreateRequest, db: Session=Depends(get_db)):
     usuario = db.get(UsuarioEntidade, id)
     if usuario is None:
