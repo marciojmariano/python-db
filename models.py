@@ -56,10 +56,10 @@ class UsuarioResponse(BaseModel):
     updated_at: Optional[datetime] = None
 
 class CargoEnum(enum.Enum):
-    N1 = "N1"
-    N2 = "N2"
-    N3 = "N3"
-    Líder = "Líder"
+    n1 = "n1"
+    n2 = "n2"
+    n3 = "n3"
+    lider = "lider"
 
 class ColaboradorEntidade(Base):
     __tablename__ = "colaboradores"
@@ -105,12 +105,16 @@ class ColaboradorUpdateRequest(BaseModel):
 
 # Definindo o Enum para o Python entender os status do banco
 class TicketStatusEnum(enum.Enum):
-    Aberto = "Aberto"
-    EM_ANDAMENTO = "Em Andamento"
-    Resolvido = "Resolvido"
-    CONCLUIDO = "Concluído"
-    def __str__(self):
-        return self.value
+    aberto = "aberto"
+    em_andamento = "em_andamento"
+    resolvido = "resolvido"
+    concluido = "concluido"
+    excluido = "excluido"
+
+class TicketPrioridadeEnum(enum.Enum):
+    baixa = "baixa"
+    importante = "importante"
+    urgente = "urgente"
 
 class TicketEntidade(Base):
     __tablename__ = "tickets"
@@ -122,10 +126,13 @@ class TicketEntidade(Base):
     # Atualizado para usar o Enum nativo que criamos no SQL
     status: Mapped[TicketStatusEnum] = mapped_column(
         Enum(TicketStatusEnum), 
-        server_default=text("'Aberto'"),
+        server_default=text("'aberto'"),
         nullable=False
     )
-    prioridade: Mapped[str] = mapped_column(String(10), server_default=text("'media'"))
+    prioridade: Mapped[TicketPrioridadeEnum] = mapped_column(
+        Enum(TicketPrioridadeEnum),
+        nullable=False
+        )
 
     # Novos campos de Workflow
     tempo_estimado: Mapped[int | None] = mapped_column(nullable=True)
@@ -174,7 +181,7 @@ class TicketResponse(BaseModel):
     id: int
     titulo: str
     status: TicketStatusEnum
-    prioridade: str
+    prioridade: TicketPrioridadeEnum
     id_usuario: int
     id_responsavel: Optional[int] = None
     created_at: datetime
@@ -186,17 +193,10 @@ class TicketCreateRequest(BaseModel):
     descricao: str = Field(..., min_length=10)
     id_usuario: int = Field(..., description="ID do usuário que está abrindo o ticket")
     id_categoria: int = Field(..., description="ID da categoria do ticket")
-    prioridade: str = Field(default="media", pattern="^(baixa|media|alta)$")
+    prioridade: TicketPrioridadeEnum = Field(..., description="Prioridades: baixa, importante e urgente")
     model_config = {"use_enum_values": True}
     
 
-# POST /tickets
-class TicketCreateRequest(BaseModel):
-    titulo: str = Field(..., min_length=5, max_length=150)
-    descricao: str = Field(..., min_length=10)
-    id_usuario: int
-    id_categoria: int
-    prioridade: str = Field(default="media", pattern="^(baixa|media|alta)$")
 
 # PUT /tickets/{id}/start
 class TicketStartRequest(BaseModel):

@@ -230,7 +230,7 @@ def criar_ticket(payload: TicketCreateRequest, db: Session = Depends(get_db)):
     # Cria o registro de Histórico de Abertura
     historico_abertura = TicketHistoricoEntidade(
         id_ticket=ticket.id,
-        status=TicketStatusEnum.Aberto
+        status=TicketStatusEnum.aberto
     )
     db.add(historico_abertura)
 
@@ -277,7 +277,7 @@ def iniciar_ticket(id: int, payload: TicketStartRequest, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Responsável não encontrado")
 
     # Atualiza ticket
-    ticket.status = TicketStatusEnum.EM_ANDAMENTO.value
+    ticket.status = TicketStatusEnum.em_andamento
     ticket.id_responsavel = payload.responsavel_id
     ticket.tempo_estimado = payload.tempo_estimado
     ticket.obersavoces_iniciais = payload.obersavoces_iniciais
@@ -285,7 +285,7 @@ def iniciar_ticket(id: int, payload: TicketStartRequest, db: Session = Depends(g
     # Registra  Histórico
     novo_historico = TicketHistoricoEntidade(
         id_ticket=ticket.id,
-        status=TicketStatusEnum.EM_ANDAMENTO.value
+        status=TicketStatusEnum.em_andamento
     )
     db.add(novo_historico)
     
