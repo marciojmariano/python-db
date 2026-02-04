@@ -1,5 +1,5 @@
 import os
-from typing import Union
+from typing import List, Union
 
 from sqlalchemy import select
 from database import Base, engine, get_db
@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from pymysql.cursors import DictCursor
 from enum import Enum
 
-from models import CategoriaCreateRequest, CategoriaEntidade, CategoriaResponse, TicketCreateRequest, TicketEntidade, TicketResponse, TicketUpdateRequest, UsuarioCreateRequest, UsuarioEntidade, UsuarioResponse
+from models import CategoriaCreateRequest, CategoriaEntidade, CategoriaResponse, ColaboradorCreateRequest, ColaboradorEntidade, ColaboradorResponse, ColaboradorUpdateRequest, TicketCreateRequest, TicketEntidade, TicketHistoricoEntidade, TicketResponse, TicketStartRequest, TicketStatusEnum, UsuarioCreateRequest, UsuarioEntidade, UsuarioResponse
 
 
 # Base.metadata.create_all(bind=engine) Não é uma boa pratica
@@ -24,6 +24,7 @@ class ApiTag(str, Enum):
     USUARIOS = "Usuarios"
     CATEGORIAS = "Categorias"
     TICKETS = "Tickets"
+    COLABORADORES = "Colaboradores"
 
 
 def get_connection():
@@ -148,7 +149,61 @@ def atualizar_usuario(id: int, payload: UsuarioCreateRequest, db: Session=Depend
     db.commit()
     db.refresh(usuario)
     return usuario
+
+
+# POST /responsaveis
+@app.post("/colaboradores", response_model=ColaboradorResponse, status_code=status.HTTP_201_CREATED, tags=[ApiTag.COLABORADORES])
+def criar_responsavel(payload: ColaboradorCreateRequest, db: Session = Depends(get_db)):
+    # Valida se o CPF já existe
+    if db.query(ColaboradorEntidade).filter(ColaboradorEntidade.cpf == payload.cpf).first():
+        raise HTTPException(status_code=400, detail="CPF já cadastrado")
     
+    novo = ColaboradorEntidade(**payload.model_dump())
+    db.add(novo)
+    db.commit()
+    db.refresh(novo)
+    return novo
+
+# GET /responsaveis
+@app.get("/colaboradores", response_model=List[ColaboradorResponse], tags=[ApiTag.COLABORADORES])
+def listar_responsaveis(db: Session = Depends(get_db)):
+    return db.query(ColaboradorEntidade).all()
+
+# GET /responsaveis/{id}
+@app.get("/colaboradores/{id}", response_model=ColaboradorResponse, tags=[ApiTag.COLABORADORES])
+def obter_responsavel(id: int, db: Session = Depends(get_db)):
+    colaborador = db.get(ColaboradorEntidade, id)
+    if not colaborador:
+        raise HTTPException(status_code=404, detail="Responsável não encontrado")
+    return colaborador
+
+# PUT /responsaveis/{id}
+@app.put("/colaboradores/{id}", response_model=ColaboradorResponse, tags=[ApiTag.COLABORADORES])
+def atualizar_responsavel(id: int, payload: ColaboradorUpdateRequest, db: Session = Depends(get_db)):
+    colaborador = db.get(ColaboradorEntidade, id)
+    if not colaborador:
+        raise HTTPException(status_code=404, detail="Responsável não encontrado")
+    
+    # Atualiza apenas os campos enviados no JSON
+    dados_atualizar = payload.model_dump(exclude_unset=True)
+    for chave, valor in dados_atualizar.items():
+        setattr(colaborador, chave, valor)
+    
+    db.commit()
+    db.refresh(colaborador)
+    return colaborador
+
+# DELETE /responsaveis/{id}
+@app.delete("/colaboradores/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.COLABORADORES])
+def deletar_responsavel(id: int, db: Session = Depends(get_db)):
+    colaborador = db.get(ColaboradorEntidade, id)
+    if not colaborador:
+        raise HTTPException(status_code=404, detail="Responsável não encontrado")
+    
+    db.delete(colaborador)
+    db.commit()
+    return None
+
 # CRUD ticket 
 @app.post("/tickets", status_code=status.HTTP_201_CREATED, response_model=TicketResponse, tags=[ApiTag.TICKETS])
 def criar_ticket(payload: TicketCreateRequest, db: Session = Depends(get_db)):
@@ -170,6 +225,16 @@ def criar_ticket(payload: TicketCreateRequest, db: Session = Depends(get_db)):
     )
     
     db.add(ticket)
+    db.flush() # ID do ticket sem finalizar a transação ainda
+
+    # Cria o registro de Histórico de Abertura
+    historico_abertura = TicketHistoricoEntidade(
+        id_ticket=ticket.id,
+        status=TicketStatusEnum.Aberto
+    )
+    db.add(historico_abertura)
+
+    db.add(ticket)
     db.commit()
     db.refresh(ticket)
     return ticket
@@ -187,27 +252,6 @@ def consultar_ticket(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Ticket não encontrado")
     return ticket
 
-# PUT /tickets/{id} (id é um query param) body é {"titulo": "titulo usuarios", "desri": "email da usuario"} alterar usuarios, caso não exista retornar 404
-@app.put("/tickets/{id}", response_model=TicketResponse, tags=[ApiTag.TICKETS])
-def atualizar_ticket(id: int, payload: TicketUpdateRequest, db: Session = Depends(get_db)):
-    ticket = db.get(TicketEntidade, id)
-    if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket não encontrado")
-    
-    categoria = db.get(CategoriaEntidade, payload.id_categoria)
-    if not categoria:
-        raise HTTPException(status_code=404, detail="Categoria informada não existe")
-
-    ticket.titulo = payload.titulo
-    ticket.descricao = payload.descricao
-    ticket.id_categoria = payload.id_categoria
-    ticket.prioridade = payload.prioridade
-    ticket.status = payload.status 
-    
-    db.commit()
-    db.refresh(ticket)
-    return ticket
-
 # DELETE /tickets/{id} (id é um query param) apagar tickets, caso não exista retornar 404
 @app.delete("/tickets/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.TICKETS])
 def deletar_ticket(id: int, db: Session = Depends(get_db)):
@@ -218,3 +262,33 @@ def deletar_ticket(id: int, db: Session = Depends(get_db)):
     db.delete(ticket)
     db.commit()
     return
+
+@app.put("/tickets/{id}/start", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def iniciar_ticket(id: int, payload: TicketStartRequest, db: Session = Depends(get_db)):
+
+    # Verifica se existe o ticket
+    ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    
+    # Verifica se existe o responsável
+    responsavel = db.query(ColaboradorEntidade).filter(ColaboradorEntidade.id == payload.responsavel_id).first()
+    if not responsavel:
+        raise HTTPException(status_code=404, detail="Responsável não encontrado")
+
+    # Atualiza ticket
+    ticket.status = TicketStatusEnum.EM_ANDAMENTO.value
+    ticket.id_responsavel = payload.responsavel_id
+    ticket.tempo_estimado = payload.tempo_estimado
+    ticket.obersavoces_iniciais = payload.obersavoces_iniciais
+
+    # Registra  Histórico
+    novo_historico = TicketHistoricoEntidade(
+        id_ticket=ticket.id,
+        status=TicketStatusEnum.EM_ANDAMENTO.value
+    )
+    db.add(novo_historico)
+    
+    db.commit()
+    db.refresh(ticket)
+    return ticket

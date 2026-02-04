@@ -1,13 +1,14 @@
+import enum
 from datetime import date, datetime
 import re
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
-
+from typing import List, Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from database import Base
+from sqlalchemy import String, ForeignKey, Text, func, text, Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
-from sqlalchemy import ForeignKey, String, Date, Text, func, text
-from sqlalchemy.orm import Mapped, mapped_column
-
+class Base(DeclarativeBase):
+    pass
 
 class CategoriaCreateRequest(BaseModel):
     nome: str = Field(min_length=2, max_lenght=100)
@@ -54,23 +55,62 @@ class UsuarioResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-class TicketCreateRequest(BaseModel):
-    titulo: str = Field(min_length=5, max_length=150)
-    descricao: str = Field(min_length=10)
-    id_usuario: int = Field(description="ID do usuário que está abrindo o ticket")
-    id_categoria: int = Field(description="ID da categoria do ticket")
-    prioridade: Optional[str] = Field(default="media", pattern="^(baixa|media|alta)$")
+class CargoEnum(enum.Enum):
+    N1 = "N1"
+    N2 = "N2"
+    N3 = "N3"
+    Líder = "Líder"
 
-class TicketResponse(BaseModel):
+class ColaboradorEntidade(Base):
+    __tablename__ = "colaboradores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nome: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    # Usando o Enum do SQLAlchemy para os cargos
+    cargo: Mapped[CargoEnum] = mapped_column(
+        Enum(CargoEnum), 
+        nullable=False
+    )
+    
+    cpf: Mapped[str] = mapped_column(String(11), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    # Relacionamento: Um colaborador pode ter vários tickets sob sua responsabilidade
+    tickets: Mapped[List["TicketEntidade"]] = relationship(back_populates="responsavel")
+
+class ColaboradorCreateRequest(BaseModel):
+    nome: str = Field(..., min_length=3, max_length=100, description="Nome completo do colaborador")
+    cargo: CargoEnum = Field(..., description="Nível de acesso: N1, N2, N3 ou Líder")
+    cpf: str = Field(..., min_length=11, max_length=11, description="CPF apenas números")
+    model_config = {
+        "use_enum_values": True
+    }
+
+class ColaboradorResponse(BaseModel):
     id: int
-    titulo: str
-    descricao: str
-    status: str
-    prioridade: str
-    id_usuario: int
-    id_categoria: int
+    nome: str
+    cargo: CargoEnum
+    cpf: str 
     created_at: datetime
-    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ColaboradorUpdateRequest(BaseModel):
+    nome: Optional[str] = Field(None, min_length=3, max_length=100)
+    cargo: Optional[CargoEnum] = None
+
+
+# Definindo o Enum para o Python entender os status do banco
+class TicketStatusEnum(enum.Enum):
+    Aberto = "Aberto"
+    EM_ANDAMENTO = "Em Andamento"
+    Resolvido = "Resolvido"
+    CONCLUIDO = "Concluído"
+    def __str__(self):
+        return self.value
 
 class TicketEntidade(Base):
     __tablename__ = "tickets"
@@ -78,19 +118,107 @@ class TicketEntidade(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     titulo: Mapped[str] = mapped_column(String(150), nullable=False)
     descricao: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), server_default=text("'aberto'"))
+    
+    # Atualizado para usar o Enum nativo que criamos no SQL
+    status: Mapped[TicketStatusEnum] = mapped_column(
+        Enum(TicketStatusEnum), 
+        server_default=text("'Aberto'"),
+        nullable=False
+    )
     prioridade: Mapped[str] = mapped_column(String(10), server_default=text("'media'"))
 
-    # Chaves Estrangeiras (Relacionamentos)
+    # Novos campos de Workflow
+    tempo_estimado: Mapped[int | None] = mapped_column(nullable=True)
+    obersavoces_iniciais: Mapped[str | None] = mapped_column(Text, nullable=True)
+    solucao_aplicada: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observacoes_internas: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reabertura_motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reabertura_detalhes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    # Campos de Avaliação
+    avaliacao: Mapped[int | None] = mapped_column(nullable=True)
+    comentario_avaliacao: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comentario_confirmacao_usuario: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Chaves Estrangeiras
     id_usuario: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
     id_categoria: Mapped[int] = mapped_column(ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False)
+    id_responsavel: Mapped[int | None] = mapped_column(ForeignKey("colaboradores.id", ondelete="SET NULL"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(nullable=True, onupdate=func.now())
 
-class TicketUpdateRequest(BaseModel):
-    titulo: str = Field(min_length=5, max_length=150)
-    descricao: str = Field(min_length=10)
+    # Relacionamento com o Responsável
+    responsavel: Mapped[Optional["ColaboradorEntidade"]] = relationship(back_populates="tickets")
+
+    # Relacionamento com o Histórico
+    historicos: Mapped[list["TicketHistoricoEntidade"]] = relationship(back_populates="ticket", cascade="all, delete-orphan")
+
+class TicketHistoricoEntidade(Base):
+    __tablename__ = "ticket_historicos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    id_ticket: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
+    status: Mapped[TicketStatusEnum] = mapped_column(Enum(TicketStatusEnum), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    ticket: Mapped["TicketEntidade"] = relationship(back_populates="historicos")
+
+class TicketHistoricoResponse(BaseModel):
+    id: int
+    status: TicketStatusEnum
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+class TicketResponse(BaseModel):
+    id: int
+    titulo: str
+    status: TicketStatusEnum
+    prioridade: str
+    id_usuario: int
+    id_responsavel: Optional[int] = None
+    created_at: datetime
+    historicos: List[TicketHistoricoResponse] = []
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+class TicketCreateRequest(BaseModel):
+    titulo: str = Field(..., min_length=5, max_length=150)
+    descricao: str = Field(..., min_length=10)
+    id_usuario: int = Field(..., description="ID do usuário que está abrindo o ticket")
+    id_categoria: int = Field(..., description="ID da categoria do ticket")
+    prioridade: str = Field(default="media", pattern="^(baixa|media|alta)$")
+    model_config = {"use_enum_values": True}
+    
+
+# POST /tickets
+class TicketCreateRequest(BaseModel):
+    titulo: str = Field(..., min_length=5, max_length=150)
+    descricao: str = Field(..., min_length=10)
+    id_usuario: int
     id_categoria: int
-    prioridade: str = Field(pattern="^(baixa|media|alta)$")
-    status: str = Field(pattern="^(aberto|em_andamento|resolvido|cancelado)$")
+    prioridade: str = Field(default="media", pattern="^(baixa|media|alta)$")
+
+# PUT /tickets/{id}/start
+class TicketStartRequest(BaseModel):
+    responsavel_id: int
+    tempo_estimado: int = Field(..., ge=1, le=7) # Min 1 dia, Max 7 dias
+    obersavoces_iniciais: str = Field(..., min_length=30)
+
+# PUT /tickets/{id}/done
+class TicketDoneRequest(BaseModel):
+    solucao_aplicada: str = Field(..., min_length=100)
+    observacoes_internas: Optional[str] = None
+
+# PUT /tickets/{id}/reopen
+class TicketReopenRequest(BaseModel):
+    motivo_reabertura: str = Field(..., min_length=1)
+    motivo_detalhes: str = Field(..., min_length=1)
+
+# PUT /tickets/{id}/close
+class TicketCloseRequest(BaseModel):
+    avaliacao: int = Field(..., ge=1, le=5)
+    comentario_avaliacao: Optional[str] = None
+    comentario_confirmacao_usuario: str = Field(..., min_length=30)
+
+
+
