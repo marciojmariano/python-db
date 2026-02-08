@@ -1,7 +1,7 @@
 import os
 from typing import List, Union
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from database import Base, engine, get_db
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status, Depends
@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from pymysql.cursors import DictCursor
 from enum import Enum
 
-from models import CategoriaCreateRequest, CategoriaEntidade, CategoriaResponse, ColaboradorCreateRequest, ColaboradorEntidade, ColaboradorResponse, ColaboradorUpdateRequest, TicketCreateRequest, TicketEntidade, TicketHistoricoEntidade, TicketResponse, TicketStartRequest, TicketStatusEnum, UsuarioCreateRequest, UsuarioEntidade, UsuarioResponse
+from models import CategoriaCreateRequest, CategoriaEntidade, CategoriaResponse, ColaboradorCreateRequest, ColaboradorEntidade, ColaboradorResponse, ColaboradorUpdateRequest, TicketCloseRequest, TicketCreateRequest, TicketDoneRequest, TicketEntidade, TicketHistoricoEntidade, TicketReopenRequest, TicketResponse, TicketStartRequest, TicketStatusEnum, UsuarioCreateRequest, UsuarioEntidade, UsuarioResponse
 
 
 # Base.metadata.create_all(bind=engine) Não é uma boa pratica
@@ -263,32 +263,120 @@ def deletar_ticket(id: int, db: Session = Depends(get_db)):
     db.commit()
     return
 
-@app.put("/tickets/{id}/start", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+@app.put("/tickets/{id}/start", response_model=TicketResponse , tags=[ApiTag.TICKETS])
 def iniciar_ticket(id: int, payload: TicketStartRequest, db: Session = Depends(get_db)):
+
+    ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    
+    if ticket.status != TicketStatusEnum.aberto:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Não é possível iniciar um ticket que já está como {ticket.status}"
+        )
+
+
+    ticket.status = TicketStatusEnum.em_andamento.value
+    ticket.id_responsavel = payload.responsavel_id
+    ticket.tempo_estimado = payload.tempo_estimado
+    ticket.obersavoces_iniciais = payload.obersavoces_iniciais
+    ticket.updated_at = func.now()
+
+
+    novo_historico = TicketHistoricoEntidade(
+        id_ticket=ticket.id,
+        status=TicketStatusEnum.em_andamento.value
+    )
+    
+    db.add(novo_historico)
+    
+    db.commit()
+    db.refresh(ticket)  
+    return ticket
+
+@app.put("/tickets/{id}/done", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def encerrar_ticket(id: int, payload: TicketDoneRequest, db: Session = Depends(get_db)):
 
     # Verifica se existe o ticket
     ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket não encontrado")
     
-    # Verifica se existe o responsável
-    responsavel = db.query(ColaboradorEntidade).filter(ColaboradorEntidade.id == payload.responsavel_id).first()
-    if not responsavel:
-        raise HTTPException(status_code=404, detail="Responsável não encontrado")
+    if ticket.status != TicketStatusEnum.em_andamento:
+        raise HTTPException(status_code=404, detail="Para encerrar um ticket, ele precisa estar em andamento!")
 
     # Atualiza ticket
-    ticket.status = TicketStatusEnum.em_andamento
-    ticket.id_responsavel = payload.responsavel_id
-    ticket.tempo_estimado = payload.tempo_estimado
-    ticket.obersavoces_iniciais = payload.obersavoces_iniciais
+    ticket.status = TicketStatusEnum.resolvido.value
+    ticket.solucao_aplicada = payload.solucao_aplicada
+    ticket.observacoes_internas = payload.observacoes_internas
+    ticket.updated_at = func.now()
 
     # Registra  Histórico
     novo_historico = TicketHistoricoEntidade(
         id_ticket=ticket.id,
-        status=TicketStatusEnum.em_andamento
+        status=TicketStatusEnum.resolvido.value
     )
     db.add(novo_historico)
     
     db.commit()
     db.refresh(ticket)
+    return ticket
+
+@app.put("/tickets/{id}/close", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def fechar_ticket(id: int, payload: TicketCloseRequest, db: Session = Depends(get_db)):
+    ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+
+    # Regra: Só pode fechar se estiver Resolvido
+    if ticket.status != TicketStatusEnum.resolvido:
+        raise HTTPException(status_code=400, detail="O ticket precisa estar Resolvido para ser fechado.")
+
+    # Atualiza os dados finais
+    ticket.status = TicketStatusEnum.concluido.value
+    ticket.avaliacao = payload.avaliacao
+    ticket.comentario_avaliacao = payload.comentario_avaliacao
+    ticket.updated_at = func.now()
+
+    # Histórico Final
+    novo_historico = TicketHistoricoEntidade(
+        id_ticket=ticket.id,
+        status=TicketStatusEnum.concluido.value
+    )
+    
+    db.add(novo_historico)
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+@app.put("/tickets/{id}/reopen", response_model=TicketResponse, tags=[ApiTag.TICKETS])
+def reabrir_ticket(id: int, payload: TicketReopenRequest, db: Session = Depends(get_db)):
+
+    ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+
+    if ticket.status != TicketStatusEnum.resolvido:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Não é possível reabrir um ticket com status. Apenas tickets 'Resolvidos' podem ser reabertos."
+        )
+
+    ticket.status = TicketStatusEnum.em_andamento.value 
+    ticket.reabertura_motivo = payload.motivo_reabertura
+    ticket.reabertura_detalhes = payload.motivo_detalhes
+    ticket.updated_at = func.now()
+
+    novo_historico = TicketHistoricoEntidade(
+        id_ticket=ticket.id,
+        status=TicketStatusEnum.em_andamento.value
+    )
+    
+    db.add(novo_historico)
+    db.commit()
+    db.refresh(ticket)
+    
     return ticket
