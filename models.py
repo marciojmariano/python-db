@@ -17,13 +17,13 @@ class CategoriaCreateRequest(BaseModel):
     descricao: str = Field(min_length=2, max_lenght=100)
 
 
-class CategoriaEntidade(Base):
-    __tablename__ = "categorias"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
-    nome: Mapped[str] = mapped_column(String(100), nullable=False)
-    descricao: Mapped[str] = mapped_column(String(100), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
+# class CategoriaEntidade(Base):
+#     __tablename__ = "categorias"
+#     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+#     nome: Mapped[str] = mapped_column(String(100), nullable=False)
+#     descricao: Mapped[str] = mapped_column(String(100), nullable=False)
+#     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+#     updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
 
 class CategoriaResponse(BaseModel):
     id: uuid.UUID
