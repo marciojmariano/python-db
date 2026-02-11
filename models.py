@@ -5,7 +5,7 @@ from datetime import date, datetime
 import re
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from database import Base
+from infraestrutura.banco_dados.database import Base
 from sqlalchemy import UUID, String, ForeignKey, Text, func, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 

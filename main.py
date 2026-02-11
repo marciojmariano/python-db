@@ -2,7 +2,7 @@ import os
 from typing import List, Union
 
 from sqlalchemy import func, select
-from database import Base, engine, get_db
+from infraestrutura.banco_dados.database import Base, engine, get_db
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status, Depends
 import psycopg2
