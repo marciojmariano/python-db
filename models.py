@@ -38,16 +38,16 @@ class UsuarioCreateRequest(BaseModel):
     senha: str = Field(min_length=6, max_length=100)
     ativo: Optional[bool] = Field(default=True)
 
-class UsuarioEntidade(Base):
-    __tablename__ = "usuarios"
+# class UsuarioEntidade(Base):
+#     __tablename__ = "usuarios"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
-    nome: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
-    senha: Mapped[str] = mapped_column(String(100), nullable=False)
-    ativo: Mapped[bool] = mapped_column(nullable=False, server_default=text("true"))
-    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
+#     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+#     nome: Mapped[str] = mapped_column(String(100), nullable=False)
+#     email: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
+#     senha: Mapped[str] = mapped_column(String(100), nullable=False)
+#     ativo: Mapped[bool] = mapped_column(nullable=False, server_default=text("true"))
+#     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+#     updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
 
 class UsuarioResponse(BaseModel):
     id: uuid.UUID

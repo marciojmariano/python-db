@@ -2,7 +2,7 @@ import os
 from typing import List, Union
 
 from sqlalchemy import func, select
-from infraestrutura.banco_dados.database import Base, engine, get_db
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status, Depends
 import psycopg2
@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from pymysql.cursors import DictCursor
 from enum import Enum
-from infraestrutura.banco_dados.modelos.categoria_modelo import CategoriaEntidade
-from models import CategoriaCreateRequest, CategoriaResponse, ColaboradorCreateRequest, ColaboradorEntidade, ColaboradorResponse, ColaboradorUpdateRequest, TicketCloseRequest, TicketCreateRequest, TicketDoneRequest, TicketEntidade, TicketHistoricoEntidade, TicketReopenRequest, TicketResponse, TicketStartRequest, TicketStatusEnum, UsuarioCreateRequest, UsuarioEntidade, UsuarioResponse
+from infraestrutura.banco_dados.database import Base, engine, get_db
+from infraestrutura.banco_dados.modelos import CategoriaEntidade, UsuarioEntidade
+from models import CategoriaCreateRequest, CategoriaResponse, ColaboradorCreateRequest, ColaboradorEntidade, ColaboradorResponse, ColaboradorUpdateRequest, TicketCloseRequest, TicketCreateRequest, TicketDoneRequest, TicketEntidade, TicketHistoricoEntidade, TicketReopenRequest, TicketResponse, TicketStartRequest, TicketStatusEnum, UsuarioCreateRequest, UsuarioResponse
 
 
 # Base.metadata.create_all(bind=engine) Não é uma boa pratica
