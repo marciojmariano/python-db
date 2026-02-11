@@ -9,6 +9,8 @@ from infraestrutura.banco_dados.database import Base
 from sqlalchemy import UUID, String, ForeignKey, Text, func, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
+from infraestrutura.banco_dados.modelos import CargoEnum
+
 class Base(DeclarativeBase):
     pass
 
@@ -57,29 +59,29 @@ class UsuarioResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-class CargoEnum(enum.Enum):
-    n1 = "n1"
-    n2 = "n2"
-    n3 = "n3"
-    lider = "lider"
+# class CargoEnum(enum.Enum):
+#     n1 = "n1"
+#     n2 = "n2"
+#     n3 = "n3"
+#     lider = "lider"
 
-class ColaboradorEntidade(Base):
-    __tablename__ = "colaboradores"
+# class ColaboradorEntidade(Base):
+#     __tablename__ = "colaboradores"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
-    nome: Mapped[str] = mapped_column(String(100), nullable=False)
+#     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+#     nome: Mapped[str] = mapped_column(String(100), nullable=False)
     
-    # Usando o Enum do SQLAlchemy para os cargos
-    cargo: Mapped[CargoEnum] = mapped_column(
-        Enum(CargoEnum), 
-        nullable=False
-    )
+#     # Usando o Enum do SQLAlchemy para os cargos
+#     cargo: Mapped[CargoEnum] = mapped_column(
+#         Enum(CargoEnum), 
+#         nullable=False
+#     )
     
-    cpf: Mapped[str] = mapped_column(String(11), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+#     cpf: Mapped[str] = mapped_column(String(11), unique=True, nullable=False)
+#     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    # Relacionamento: Um colaborador pode ter vários tickets sob sua responsabilidade
-    tickets: Mapped[List["TicketEntidade"]] = relationship(back_populates="responsavel")
+#     # Relacionamento: Um colaborador pode ter vários tickets sob sua responsabilidade
+#     tickets: Mapped[List["TicketEntidade"]] = relationship(back_populates="responsavel")
 
 class ColaboradorCreateRequest(BaseModel):
     nome: str = Field(..., min_length=3, max_length=100, description="Nome completo do colaborador")
@@ -118,60 +120,60 @@ class TicketPrioridadeEnum(enum.Enum):
     importante = "importante"
     urgente = "urgente"
 
-class TicketEntidade(Base):
-    __tablename__ = "tickets"
+# class TicketEntidade(Base):
+#     __tablename__ = "tickets"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
-    titulo: Mapped[str] = mapped_column(String(150), nullable=False)
-    descricao: Mapped[str] = mapped_column(Text, nullable=False)
+#     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+#     titulo: Mapped[str] = mapped_column(String(150), nullable=False)
+#     descricao: Mapped[str] = mapped_column(Text, nullable=False)
     
-    # Atualizado para usar o Enum nativo que criamos no SQL
-    status: Mapped[TicketStatusEnum] = mapped_column(
-        Enum(TicketStatusEnum), 
-        server_default=text("'aberto'"),
-        nullable=False
-    )
-    prioridade: Mapped[TicketPrioridadeEnum] = mapped_column(
-        Enum(TicketPrioridadeEnum),
-        nullable=False
-        )
+#     # Atualizado para usar o Enum nativo que criamos no SQL
+#     status: Mapped[TicketStatusEnum] = mapped_column(
+#         Enum(TicketStatusEnum), 
+#         server_default=text("'aberto'"),
+#         nullable=False
+#     )
+#     prioridade: Mapped[TicketPrioridadeEnum] = mapped_column(
+#         Enum(TicketPrioridadeEnum),
+#         nullable=False
+#         )
 
-    # Novos campos de Workflow
-    tempo_estimado: Mapped[int | None] = mapped_column(nullable=True)
-    obersavoces_iniciais: Mapped[str | None] = mapped_column(Text, nullable=True)
-    solucao_aplicada: Mapped[str | None] = mapped_column(Text, nullable=True)
-    observacoes_internas: Mapped[str | None] = mapped_column(Text, nullable=True)
-    reabertura_motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    reabertura_detalhes: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     # Novos campos de Workflow
+#     tempo_estimado: Mapped[int | None] = mapped_column(nullable=True)
+#     obersavoces_iniciais: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     solucao_aplicada: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     observacoes_internas: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     reabertura_motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     reabertura_detalhes: Mapped[str | None] = mapped_column(Text, nullable=True)
     
-    # Campos de Avaliação
-    avaliacao: Mapped[int | None] = mapped_column(nullable=True)
-    comentario_avaliacao: Mapped[str | None] = mapped_column(Text, nullable=True)
-    comentario_confirmacao_usuario: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     # Campos de Avaliação
+#     avaliacao: Mapped[int | None] = mapped_column(nullable=True)
+#     comentario_avaliacao: Mapped[str | None] = mapped_column(Text, nullable=True)
+#     comentario_confirmacao_usuario: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Chaves Estrangeiras
-    id_usuario: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
-    id_categoria: Mapped[uuid.UUID] = mapped_column(ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False)
-    id_responsavel: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("colaboradores.id", ondelete="SET NULL"), nullable=True)
+#     # Chaves Estrangeiras
+#     id_usuario: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+#     id_categoria: Mapped[uuid.UUID] = mapped_column(ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False)
+#     id_responsavel: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("colaboradores.id", ondelete="SET NULL"), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime | None] = mapped_column(nullable=True, onupdate=func.now())
+#     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+#     updated_at: Mapped[datetime | None] = mapped_column(nullable=True, onupdate=func.now())
 
-    # Relacionamento com o Responsável
-    responsavel: Mapped[Optional["ColaboradorEntidade"]] = relationship(back_populates="tickets")
+#     # Relacionamento com o Responsável
+#     responsavel: Mapped[Optional["ColaboradorEntidade"]] = relationship(back_populates="tickets")
 
-    # Relacionamento com o Histórico
-    historicos: Mapped[list["TicketHistoricoEntidade"]] = relationship(back_populates="ticket", cascade="all, delete-orphan")
+#     # Relacionamento com o Histórico
+#     historicos: Mapped[list["TicketHistoricoEntidade"]] = relationship(back_populates="ticket", cascade="all, delete-orphan")
 
-class TicketHistoricoEntidade(Base):
-    __tablename__ = "ticket_historicos"
+# class TicketHistoricoEntidade(Base):
+#     __tablename__ = "ticket_historicos"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
-    id_ticket: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
-    status: Mapped[TicketStatusEnum] = mapped_column(Enum(TicketStatusEnum), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+#     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+#     id_ticket: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
+#     status: Mapped[TicketStatusEnum] = mapped_column(Enum(TicketStatusEnum), nullable=False)
+#     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    ticket: Mapped["TicketEntidade"] = relationship(back_populates="historicos")
+#     ticket: Mapped["TicketEntidade"] = relationship(back_populates="historicos")
 
 class TicketHistoricoResponse(BaseModel):
     id: uuid.UUID

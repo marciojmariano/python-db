@@ -1,8 +1,6 @@
 import os
 from typing import List, Union
-
 from sqlalchemy import func, select
-
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status, Depends
 import psycopg2
@@ -12,8 +10,9 @@ from pydantic import BaseModel
 from pymysql.cursors import DictCursor
 from enum import Enum
 from infraestrutura.banco_dados.database import Base, engine, get_db
-from infraestrutura.banco_dados.modelos import CategoriaEntidade, UsuarioEntidade
-from models import CategoriaCreateRequest, CategoriaResponse, ColaboradorCreateRequest, ColaboradorEntidade, ColaboradorResponse, ColaboradorUpdateRequest, TicketCloseRequest, TicketCreateRequest, TicketDoneRequest, TicketEntidade, TicketHistoricoEntidade, TicketReopenRequest, TicketResponse, TicketStartRequest, TicketStatusEnum, UsuarioCreateRequest, UsuarioResponse
+from infraestrutura.banco_dados.modelos import TicketStatusEnum, CategoriaEntidade, UsuarioEntidade, ColaboradorEntidade, TicketEntidade, TicketHistoricoEntidade
+
+from models import CategoriaCreateRequest, CategoriaResponse, ColaboradorCreateRequest, ColaboradorResponse, ColaboradorUpdateRequest, TicketCloseRequest, TicketCreateRequest, TicketDoneRequest, TicketReopenRequest, TicketResponse, TicketStartRequest, UsuarioCreateRequest, UsuarioResponse
 
 
 # Base.metadata.create_all(bind=engine) Não é uma boa pratica
@@ -231,7 +230,7 @@ def criar_ticket(payload: TicketCreateRequest, db: Session = Depends(get_db)):
     # Cria o registro de Histórico de Abertura
     historico_abertura = TicketHistoricoEntidade(
         id_ticket=ticket.id,
-        status=TicketStatusEnum.aberto
+        status=TicketStatusEnum.aberto.value
     )
     db.add(historico_abertura)
 
