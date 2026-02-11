@@ -1,5 +1,6 @@
 import os
 from typing import List, Union
+import uuid
 from sqlalchemy import func, select
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status, Depends
@@ -11,8 +12,10 @@ from pymysql.cursors import DictCursor
 from enum import Enum
 from infraestrutura.banco_dados.database import Base, engine, get_db
 from infraestrutura.banco_dados.modelos import TicketStatusEnum, CategoriaEntidade, UsuarioEntidade, ColaboradorEntidade, TicketEntidade, TicketHistoricoEntidade
-
-from models import CategoriaCreateRequest, CategoriaResponse, ColaboradorCreateRequest, ColaboradorResponse, ColaboradorUpdateRequest, TicketCloseRequest, TicketCreateRequest, TicketDoneRequest, TicketReopenRequest, TicketResponse, TicketStartRequest, UsuarioCreateRequest, UsuarioResponse
+from api.schemas.categoria_schemas import CategoriaCreateRequest, CategoriaResponse
+from api.schemas.usuario_schemas import UsuarioCreateRequest, UsuarioResponse
+from api.schemas.colaborador_schemas import ColaboradorCreateRequest, ColaboradorResponse, ColaboradorUpdateRequest
+from api.schemas.ticket_schemas import TicketCreateRequest, TicketResponse, TicketCloseRequest, TicketDoneRequest, TicketReopenRequest, TicketStartRequest
 
 
 # Base.metadata.create_all(bind=engine) Não é uma boa pratica
@@ -61,7 +64,7 @@ def listar_categorias(db:Session = Depends(get_db)):
 
 # GET /categorias/{id} (id é um query param) buscar a categoria por id, caso não exista retornar 404
 @app.get("/categorias/{id}", response_model = CategoriaResponse, tags=[ApiTag.CATEGORIAS])
-def consultar_categoria(id: int, db:Session = Depends(get_db)):
+def consultar_categoria(id: uuid.UUID, db:Session = Depends(get_db)):
     categoria = db.get(CategoriaEntidade, id)
     if categoria is None:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
@@ -69,7 +72,7 @@ def consultar_categoria(id: int, db:Session = Depends(get_db)):
 
 # DELETE /categorias/{id} (id é um query param) apagar categoria, caso não exista retornar 404
 @app.delete("/categorias/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.CATEGORIAS])
-def deletar_categoria(id: int, db: Session=Depends(get_db)):
+def deletar_categoria(id: uuid.UUID, db: Session=Depends(get_db)):
     categoria = db.get(CategoriaEntidade, id)
     if categoria is None:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
@@ -79,7 +82,7 @@ def deletar_categoria(id: int, db: Session=Depends(get_db)):
 
 # PUT /categorias/{id} (id é um query param) body é {"nome": "nome da categorias", "descricao": "descricao da categoria"} alterar categorias, caso não exista retornar 404
 @app.put("/categorias/{id}", response_model = CategoriaResponse, tags=[ApiTag.CATEGORIAS])
-def atualizar_categoria(id: int, payload: CategoriaCreateRequest, db: Session=Depends(get_db)):
+def atualizar_categoria(id: uuid.UUID, payload: CategoriaCreateRequest, db: Session=Depends(get_db)):
     categoria = db.get(CategoriaEntidade, id)
     if categoria is None:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
@@ -121,7 +124,7 @@ def listar_usuarios(db:Session = Depends(get_db)):
 
 # GET /usuarios/{id} (id é um query param) buscar a usuario por id, caso não exista retornar 404
 @app.get("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.USUARIOS])
-def consultar_usuario(id: int, db:Session = Depends(get_db)):
+def consultar_usuario(id: uuid.UUID, db:Session = Depends(get_db)):
     usuario = db.get(UsuarioEntidade, id)
     if usuario is None:
         raise HTTPException(status_code=404, detail="usuario não encontrada")
@@ -129,7 +132,7 @@ def consultar_usuario(id: int, db:Session = Depends(get_db)):
 
 # DELETE /usuarios/{id} (id é um query param) apagar usuario, caso não exista retornar 404
 @app.delete("/usuarios/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.USUARIOS])
-def deletar_usuario(id: int, db: Session=Depends(get_db)):
+def deletar_usuario(id: uuid.UUID, db: Session=Depends(get_db)):
     usuario = db.get(UsuarioEntidade, id)
     if usuario is None:
         raise HTTPException(status_code=404, detail="usuario não encontrada")
@@ -139,7 +142,7 @@ def deletar_usuario(id: int, db: Session=Depends(get_db)):
 
 # PUT /usuarios/{id} (id é um query param) body é {"nome": "nome da usuarios", "email": "email da usuario"} alterar usuarios, caso não exista retornar 404
 @app.put("/usuarios/{id}", response_model = UsuarioResponse, tags=[ApiTag.USUARIOS])
-def atualizar_usuario(id: int, payload: UsuarioCreateRequest, db: Session=Depends(get_db)):
+def atualizar_usuario(id: uuid.UUID, payload: UsuarioCreateRequest, db: Session=Depends(get_db)):
     usuario = db.get(UsuarioEntidade, id)
     if usuario is None:
         raise HTTPException(status_code=404, detail="usuario não encontrada")
@@ -171,7 +174,7 @@ def listar_responsaveis(db: Session = Depends(get_db)):
 
 # GET /responsaveis/{id}
 @app.get("/colaboradores/{id}", response_model=ColaboradorResponse, tags=[ApiTag.COLABORADORES])
-def obter_responsavel(id: int, db: Session = Depends(get_db)):
+def obter_responsavel(id: uuid.UUID, db: Session = Depends(get_db)):
     colaborador = db.get(ColaboradorEntidade, id)
     if not colaborador:
         raise HTTPException(status_code=404, detail="Responsável não encontrado")
@@ -179,7 +182,7 @@ def obter_responsavel(id: int, db: Session = Depends(get_db)):
 
 # PUT /responsaveis/{id}
 @app.put("/colaboradores/{id}", response_model=ColaboradorResponse, tags=[ApiTag.COLABORADORES])
-def atualizar_responsavel(id: int, payload: ColaboradorUpdateRequest, db: Session = Depends(get_db)):
+def atualizar_responsavel(id: uuid.UUID, payload: ColaboradorUpdateRequest, db: Session = Depends(get_db)):
     colaborador = db.get(ColaboradorEntidade, id)
     if not colaborador:
         raise HTTPException(status_code=404, detail="Responsável não encontrado")
@@ -195,7 +198,7 @@ def atualizar_responsavel(id: int, payload: ColaboradorUpdateRequest, db: Sessio
 
 # DELETE /responsaveis/{id}
 @app.delete("/colaboradores/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.COLABORADORES])
-def deletar_responsavel(id: int, db: Session = Depends(get_db)):
+def deletar_responsavel(id: uuid.UUID, db: Session = Depends(get_db)):
     colaborador = db.get(ColaboradorEntidade, id)
     if not colaborador:
         raise HTTPException(status_code=404, detail="Responsável não encontrado")
@@ -246,7 +249,7 @@ def listar_tickets(db: Session = Depends(get_db)):
 
 # GET /tickets/{id} (id é um query param) buscar a tickets por id, caso não exista retornar 404
 @app.get("/tickets/{id}", response_model=TicketResponse, tags=[ApiTag.TICKETS])
-def consultar_ticket(id: int, db: Session = Depends(get_db)):
+def consultar_ticket(id: uuid.UUID, db: Session = Depends(get_db)):
     ticket = db.get(TicketEntidade, id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket não encontrado")
@@ -254,7 +257,7 @@ def consultar_ticket(id: int, db: Session = Depends(get_db)):
 
 # DELETE /tickets/{id} (id é um query param) apagar tickets, caso não exista retornar 404
 @app.delete("/tickets/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTag.TICKETS])
-def deletar_ticket(id: int, db: Session = Depends(get_db)):
+def deletar_ticket(id: uuid.UUID, db: Session = Depends(get_db)):
     ticket = db.get(TicketEntidade, id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket não encontrado")
@@ -264,7 +267,7 @@ def deletar_ticket(id: int, db: Session = Depends(get_db)):
     return
 
 @app.put("/tickets/{id}/start", response_model=TicketResponse , tags=[ApiTag.TICKETS])
-def iniciar_ticket(id: int, payload: TicketStartRequest, db: Session = Depends(get_db)):
+def iniciar_ticket(id: uuid.UUID, payload: TicketStartRequest, db: Session = Depends(get_db)):
 
     ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
     
@@ -297,7 +300,7 @@ def iniciar_ticket(id: int, payload: TicketStartRequest, db: Session = Depends(g
     return ticket
 
 @app.put("/tickets/{id}/done", response_model=TicketResponse, tags=[ApiTag.TICKETS])
-def encerrar_ticket(id: int, payload: TicketDoneRequest, db: Session = Depends(get_db)):
+def encerrar_ticket(id: uuid.UUID, payload: TicketDoneRequest, db: Session = Depends(get_db)):
 
     # Verifica se existe o ticket
     ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
@@ -325,7 +328,7 @@ def encerrar_ticket(id: int, payload: TicketDoneRequest, db: Session = Depends(g
     return ticket
 
 @app.put("/tickets/{id}/close", response_model=TicketResponse, tags=[ApiTag.TICKETS])
-def fechar_ticket(id: int, payload: TicketCloseRequest, db: Session = Depends(get_db)):
+def fechar_ticket(id: uuid.UUID, payload: TicketCloseRequest, db: Session = Depends(get_db)):
     ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
     
     if not ticket:
@@ -353,7 +356,7 @@ def fechar_ticket(id: int, payload: TicketCloseRequest, db: Session = Depends(ge
     return ticket
 
 @app.put("/tickets/{id}/reopen", response_model=TicketResponse, tags=[ApiTag.TICKETS])
-def reabrir_ticket(id: int, payload: TicketReopenRequest, db: Session = Depends(get_db)):
+def reabrir_ticket(id: uuid.UUID, payload: TicketReopenRequest, db: Session = Depends(get_db)):
 
     ticket = db.query(TicketEntidade).filter(TicketEntidade.id == id).first()
     if not ticket:
