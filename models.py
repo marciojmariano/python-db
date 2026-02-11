@@ -1,10 +1,12 @@
+import uuid
+from uuid6 import uuid7
 import enum
 from datetime import date, datetime
 import re
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from database import Base
-from sqlalchemy import String, ForeignKey, Text, func, text, Enum
+from sqlalchemy import UUID, String, ForeignKey, Text, func, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
 class Base(DeclarativeBase):
@@ -17,14 +19,14 @@ class CategoriaCreateRequest(BaseModel):
 
 class CategoriaEntidade(Base):
     __tablename__ = "categorias"
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
     nome: Mapped[str] = mapped_column(String(100), nullable=False)
     descricao: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
 
 class CategoriaResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     nome: str
     descricao: str
     created_at: datetime
@@ -39,7 +41,7 @@ class UsuarioCreateRequest(BaseModel):
 class UsuarioEntidade(Base):
     __tablename__ = "usuarios"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
     nome: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
     senha: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -48,7 +50,7 @@ class UsuarioEntidade(Base):
     updated_at: Mapped[datetime|None] = mapped_column(nullable=True, onupdate=func.now())
 
 class UsuarioResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     nome: str
     email: EmailStr
     ativo: bool
@@ -64,7 +66,7 @@ class CargoEnum(enum.Enum):
 class ColaboradorEntidade(Base):
     __tablename__ = "colaboradores"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
     nome: Mapped[str] = mapped_column(String(100), nullable=False)
     
     # Usando o Enum do SQLAlchemy para os cargos
@@ -88,7 +90,7 @@ class ColaboradorCreateRequest(BaseModel):
     }
 
 class ColaboradorResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     nome: str
     cargo: CargoEnum
     cpf: str 
@@ -119,7 +121,7 @@ class TicketPrioridadeEnum(enum.Enum):
 class TicketEntidade(Base):
     __tablename__ = "tickets"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
     titulo: Mapped[str] = mapped_column(String(150), nullable=False)
     descricao: Mapped[str] = mapped_column(Text, nullable=False)
     
@@ -148,9 +150,9 @@ class TicketEntidade(Base):
     comentario_confirmacao_usuario: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Chaves Estrangeiras
-    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
-    id_categoria: Mapped[int] = mapped_column(ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False)
-    id_responsavel: Mapped[int | None] = mapped_column(ForeignKey("colaboradores.id", ondelete="SET NULL"), nullable=True)
+    id_usuario: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    id_categoria: Mapped[uuid.UUID] = mapped_column(ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False)
+    id_responsavel: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("colaboradores.id", ondelete="SET NULL"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(nullable=True, onupdate=func.now())
@@ -164,7 +166,7 @@ class TicketEntidade(Base):
 class TicketHistoricoEntidade(Base):
     __tablename__ = "ticket_historicos"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
     id_ticket: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
     status: Mapped[TicketStatusEnum] = mapped_column(Enum(TicketStatusEnum), nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
@@ -172,18 +174,18 @@ class TicketHistoricoEntidade(Base):
     ticket: Mapped["TicketEntidade"] = relationship(back_populates="historicos")
 
 class TicketHistoricoResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     status: TicketStatusEnum
     created_at: datetime
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 class TicketResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     titulo: str
     status: TicketStatusEnum
     prioridade: TicketPrioridadeEnum
-    id_usuario: int
-    id_responsavel: Optional[int] = None
+    id_usuario: uuid.UUID
+    id_responsavel: Optional[uuid.UUID] = None
     created_at: datetime
     historicos: List[TicketHistoricoResponse] = []
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
@@ -191,8 +193,8 @@ class TicketResponse(BaseModel):
 class TicketCreateRequest(BaseModel):
     titulo: str = Field(..., min_length=5, max_length=150)
     descricao: str = Field(..., min_length=10)
-    id_usuario: int = Field(..., description="ID do usuário que está abrindo o ticket")
-    id_categoria: int = Field(..., description="ID da categoria do ticket")
+    id_usuario: uuid.UUID = Field(..., description="ID do usuário que está abrindo o ticket")
+    id_categoria: uuid.UUID = Field(..., description="ID da categoria do ticket")
     prioridade: TicketPrioridadeEnum = Field(..., description="Prioridades: baixa, importante e urgente")
     model_config = {"use_enum_values": True}
     
