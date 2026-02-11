@@ -18,5 +18,4 @@ class TicketHistoricoEntidade(Base):
     id_ticket: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
     status: Mapped[TicketStatusEnum] = mapped_column(Enum(TicketStatusEnum), nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-
     ticket: Mapped["TicketEntidade"] = relationship(back_populates="historicos")

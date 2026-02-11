@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 import uuid
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from infraestrutura.banco_dados.modelos import CargoEnum
 
 
@@ -17,7 +17,7 @@ class ColaboradorResponse(BaseModel):
     id: uuid.UUID
     nome: str
     cargo: CargoEnum
-    cpf: str 
+    cpf: str
     created_at: datetime
 
     class Config:
