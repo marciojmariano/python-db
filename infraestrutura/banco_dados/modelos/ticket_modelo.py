@@ -35,7 +35,7 @@ class TicketEntidade(Base):
 
     # Novos campos de Workflow
     tempo_estimado: Mapped[int | None] = mapped_column(nullable=True)
-    obersavoces_iniciais: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observacoes_iniciais: Mapped[str | None] = mapped_column(Text, nullable=True)
     solucao_aplicada: Mapped[str | None] = mapped_column(Text, nullable=True)
     observacoes_internas: Mapped[str | None] = mapped_column(Text, nullable=True)
     reabertura_motivo: Mapped[str | None] = mapped_column(Text, nullable=True)

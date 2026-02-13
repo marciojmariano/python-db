@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import func, select
+from api.schemas.ticket_schemas import TicketStartRequest
 from infraestrutura.banco_dados.modelos import TicketEntidade, TicketHistoricoEntidade
 import uuid
+
+from infraestrutura.banco_dados.modelos.enums import TicketStatusEnum
 
 class TicketRepositorio:
     def __init__(self, db: Session):
@@ -41,6 +44,23 @@ class TicketRepositorio:
             status=novo_status
         )
         self.db.add(historico)
+        self.db.commit()
+        self.db.refresh(ticket)
+        return ticket
+
+    def iniciar_ticket(self, ticket: TicketEntidade, payload: TicketStartRequest):
+        ticket.status = TicketStatusEnum.em_andamento.value
+        ticket.id_responsavel = payload.responsavel_id
+        ticket.tempo_estimado = payload.tempo_estimado
+        ticket.ob = payload.observacoes_iniciais
+        ticket.updated_at = func.now()
+
+        novo_historico = TicketHistoricoEntidade(
+            id_ticket=ticket.id,
+            status=TicketStatusEnum.em_andamento.value,
+        )
+        
+        self.db.add(novo_historico)
         self.db.commit()
         self.db.refresh(ticket)
         return ticket

@@ -13,26 +13,10 @@ from api.rotas import (
     ticket_router,
     ticket_historico_router
 )
-
-# 1. Criação das tabelas no banco de dados (MaxiProd / Plana Expositores)
-# Em ambiente de produção, o ideal é usar migrações (Alembic), 
-# mas para o desenvolvimento atual, o Base.metadata resolve.
-Base.metadata.create_all(bind=engine)
-
-# 2. Inicialização do App FastAPI
 app = FastAPI(
-    title="Sistema de Gestão de Tickets - Plana Expositores & Benedere",
+    title="Sistema de Gestão de Tickets",
     description="API para gerenciamento de chamados internos e suporte técnico.",
     version="2.0.0"
-)
-
-# 3. Configuração de CORS (Opcional, mas importante se for usar um Frontend/React)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 # 4. Inclusão das Rotas (Registrando os APIRouters)
@@ -42,17 +26,8 @@ app.include_router(colaborador_router.router)
 app.include_router(ticket_router.router)
 app.include_router(ticket_historico_router.router)
 
-# 5. Rota de verificação de saúde (Healthcheck)
-@app.get("/", tags=["Healthcheck"])
-def root():
-    return {
-        "status": "online",
-        "mensagem": "API de Tickets operando corretamente com UUID v7 e Repositórios."
-    }
-
-# 6. Execução do Servidor
+# Isso permite que você rode o projeto dando um "python main.py"
 if __name__ == "__main__":
-    # Rodando na porta 8000 com reload automático para facilitar seus testes
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
 # import os

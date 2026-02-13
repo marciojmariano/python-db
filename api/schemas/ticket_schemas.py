@@ -19,7 +19,7 @@ class TicketCreateRequest(BaseModel):
 class TicketStartRequest(BaseModel):
     responsavel_id: uuid.UUID
     tempo_estimado: int = Field(..., ge=1, le=7) # Min 1 dia, Max 7 dias
-    obersavoces_iniciais: str = Field(..., min_length=30)
+    observacoes_iniciais: str = Field(..., min_length=30)
 
 # PUT /tickets/{id}/done
 class TicketDoneRequest(BaseModel):
