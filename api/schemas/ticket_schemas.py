@@ -37,7 +37,6 @@ class TicketCloseRequest(BaseModel):
     comentario_avaliacao: Optional[str] = None
     comentario_confirmacao_usuario: str = Field(..., min_length=30)
 
-
 class TicketResponse(BaseModel):
     id: uuid.UUID
     titulo: str

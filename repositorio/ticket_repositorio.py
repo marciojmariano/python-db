@@ -1,6 +1,8 @@
+from fastapi import Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
-from api.schemas.ticket_schemas import TicketStartRequest
+from api.schemas.ticket_schemas import TicketCloseRequest, TicketDoneRequest, TicketReopenRequest, TicketStartRequest
+from infraestrutura.banco_dados.database import get_db
 from infraestrutura.banco_dados.modelos import TicketEntidade, TicketHistoricoEntidade
 import uuid
 
@@ -58,6 +60,60 @@ class TicketRepositorio:
         novo_historico = TicketHistoricoEntidade(
             id_ticket=ticket.id,
             status=TicketStatusEnum.em_andamento.value,
+        )
+        
+        self.db.add(novo_historico)
+        self.db.commit()
+        self.db.refresh(ticket)
+        return ticket
+
+    def encerrar_ticket(self, ticket: TicketEntidade, payload: TicketDoneRequest):
+        # 1. Atualiza o ticket para 'resolvido'
+        ticket.status = TicketStatusEnum.resolvido
+        ticket.solucao_aplicada = payload.solucao_aplicada
+        ticket.observacoes_internas = payload.observacoes_internas
+        ticket.updated_at = func.now()
+
+        # 2. Registra no histórico
+        novo_historico = TicketHistoricoEntidade(
+            id_ticket=ticket.id,
+            status=TicketStatusEnum.resolvido,
+        )
+        
+        self.db.add(novo_historico)
+        self.db.commit()
+        self.db.refresh(ticket)
+        return ticket
+    
+    def fechar_ticket(self, ticket: TicketEntidade, payload: TicketCloseRequest):
+        # 1. Finaliza os dados de avaliação
+        ticket.status = TicketStatusEnum.concluido
+        ticket.avaliacao = payload.avaliacao
+        ticket.comentario_avaliacao = payload.comentario_avaliacao
+        ticket.updated_at = func.now()
+
+        # 2. Registra o histórico de conclusão
+        novo_historico = TicketHistoricoEntidade(
+            id_ticket=ticket.id,
+            status=TicketStatusEnum.concluido,
+        )
+        
+        self.db.add(novo_historico)
+        self.db.commit()
+        self.db.refresh(ticket)
+        return ticket
+    
+    def reabrir_ticket(self, ticket: TicketEntidade, payload: TicketReopenRequest):
+        # 1. Volta o status para Em Andamento
+        ticket.status = TicketStatusEnum.em_andamento
+        ticket.reabertura_motivo = payload.motivo_reabertura
+        ticket.reabertura_detalhes = payload.motivo_detalhes
+        ticket.updated_at = func.now()
+
+        # 2. Registra o histórico da reabertura
+        novo_historico = TicketHistoricoEntidade(
+            id_ticket=ticket.id,
+            status=TicketStatusEnum.em_andamento,
         )
         
         self.db.add(novo_historico)
