@@ -7,7 +7,7 @@ class ColaboradorRepositorio:
     def __init__(self, db: Session):
         self.db = db
 
-    def listar(self):
+    def listar(self) -> list[ColaboradorEntidade]:
         return self.db.scalars(select(ColaboradorEntidade)).all()
 
     def buscar_por_id(self, id: uuid.UUID):
@@ -19,7 +19,7 @@ class ColaboradorRepositorio:
         self.db.refresh(colaborador)
         return colaborador
 
-    def atualizar(self, colaborador_db: ColaboradorEntidade):
+    def atualizar(self, colaborador_db: ColaboradorEntidade) -> ColaboradorEntidade:
         self.db.commit()
         self.db.refresh(colaborador_db)
         return colaborador_db
