@@ -13,12 +13,10 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
 @router.post("/", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
 def criar_ticket(request: TicketCreateRequest, db: Session = Depends(get_db)) -> TicketResponse:
-    # O Router NÃO conhece mais o Repositório, apenas o Service
     return TicketService.criar_novo_ticket(db, request)
 
 @router.get("/", response_model=List[TicketResponse])
 def listar_tickets(db: Session = Depends(get_db)) -> List[TicketResponse]:
-    # O Router apenas chama o Service e retorna o resultado
     return TicketService.buscar_todos_os_tickets(db)
 
 @router.get("/{id}", response_model=TicketResponse)

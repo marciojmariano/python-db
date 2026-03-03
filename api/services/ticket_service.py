@@ -7,8 +7,6 @@ class TicketService:
     @staticmethod
     def criar_novo_ticket(db: Session, request: TicketCreateRequest) -> TicketEntidade:
         repo = TicketRepositorio(db)
-        
-        # A regra de negócio (status padrão) fica no Service
         novo_ticket = TicketEntidade(
             titulo=request.titulo,
             descricao=request.descricao,
@@ -18,7 +16,6 @@ class TicketService:
             status="aberto"
         )
         
-        # O Service delega a persistência para o Repositório
         return repo.criar(novo_ticket, observacao_inicial=request.descricao)
     
     def buscar_todos_os_tickets(db: Session) -> list[TicketEntidade]:
