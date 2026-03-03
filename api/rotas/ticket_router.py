@@ -17,9 +17,9 @@ def criar_ticket(request: TicketCreateRequest, db: Session = Depends(get_db)) ->
     return TicketService.criar_novo_ticket(db, request)
 
 @router.get("/", response_model=List[TicketResponse])
-def listar_tickets(db: Session = Depends(get_db)):
-    repo = TicketRepositorio(db)
-    return repo.listar_todos()
+def listar_tickets(db: Session = Depends(get_db)) -> List[TicketResponse]:
+    # O Router apenas chama o Service e retorna o resultado
+    return TicketService.buscar_todos_os_tickets(db)
 
 @router.get("/{id}", response_model=TicketResponse)
 def obter_ticket(id: uuid.UUID, db: Session = Depends(get_db)):

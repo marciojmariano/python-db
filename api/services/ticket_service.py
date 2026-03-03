@@ -20,3 +20,8 @@ class TicketService:
         
         # O Service delega a persistência para o Repositório
         return repo.criar(novo_ticket, observacao_inicial=request.descricao)
+    
+    def buscar_todos_os_tickets(db: Session) -> list[TicketEntidade]:
+        """Lógica de negócio para listar todos os tickets."""
+        repo = TicketRepositorio(db)
+        return repo.listar_todos()
